@@ -1,0 +1,8 @@
+# after installation of cuda, pytorch, torchvision, mmcv-full
+mmdet
+instaboostfast
+git+https://github.com/cocodataset/panopticapi.git
+git+https://github.com/lvis-dataset/lvis-api.git
+albumentations>=0.3.2 --no-binary qudida,albumentations
+tensorboard
+protobuf==3.20.0

@@ -55,8 +55,8 @@ test_pipeline = [
         ])
 ]
 data = dict(
-    samples_per_gpu=2,
-    workers_per_gpu=2,
+    samples_per_gpu=4,  # 单个 GPU 的 Batch size
+    workers_per_gpu=4,  # 单个 GPU 分配的数据加载线程数
     train=dict(
         type='CocoDataset',
         ann_file='datasets/2021-03-06-09-52-50/jsons2coco_train/annotations.json',
@@ -148,11 +148,11 @@ data = dict(
                 ])
         ]))
 evaluation = dict(
-    interval=5000,
+    interval=500,
     metric=['bbox', 'segm'],
     dynamic_intervals=[(365001, 368750)])
 checkpoint_config = dict(
-    interval=5000, by_epoch=False, save_last=True, max_keep_ckpts=3)
+    interval=500, by_epoch=False, save_last=True, max_keep_ckpts=3)
 log_config = dict(
     interval=50,
     hooks=[
@@ -162,12 +162,13 @@ log_config = dict(
 custom_hooks = [dict(type='NumClassCheckHook')]
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-load_from = 'checkpoints/benchmarks/mask2former_swin-s-p4-w7-224_lsj_8x2_50e_coco_20220504_001756-743b7d99.pth'
+# load_from = 'benchmarks/mask2former_swin-s-p4-w7-224_lsj_8x2_50e_coco_20220504_001756-743b7d99.pth'
+load_from = None
 resume_from = None
 workflow = [('train', 5000)]
 opencv_num_threads = 0
 mp_start_method = 'fork'
-auto_scale_lr = dict(enable=False, base_batch_size=2)
+auto_scale_lr = dict(enable=False, base_batch_size=16)
 num_things_classes = 1
 num_stuff_classes = 0
 num_classes = 1
@@ -272,15 +273,19 @@ model = dict(
             use_sigmoid=False,
             loss_weight=2.0,
             reduction='mean',
+            # class_weight=[
+            #     1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+            #     1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+            #     1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+            #     1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+            #     1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+            #     1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+            #     1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.1
+            # ]
             class_weight=[
-                1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
-                1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
-                1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
-                1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
-                1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
-                1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
-                1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.1
-            ]),
+                1.0, 0.1
+            ]
+            ),
         loss_mask=dict(
             type='CrossEntropyLoss',
             use_sigmoid=True,
@@ -320,7 +325,7 @@ model = dict(
         iou_thr=0.8,
         filter_low_score=True),
     init_cfg=None)
-image_size = (1024, 1024)
+image_size = (1920, 1080)
 embed_multi = dict(lr_mult=1.0, decay_mult=0.0)
 optimizer = dict(
     type='AdamW',
@@ -414,7 +419,7 @@ lr_config = dict(
     warmup_iters=10)
 max_iters = 368750
 runner = dict(type='IterBasedRunner', max_iters=368750)
-interval = 5000
+interval = 500
 dynamic_intervals = [(365001, 368750)]
 pad_cfg = dict(img=(128, 128, 128), masks=0, seg=255)
 pretrained = 'https://github.com/SwinTransformer/storage/releases/download/v1.0.0/swin_small_patch4_window7_224.pth'
