@@ -148,15 +148,16 @@ data = dict(
                 ])
         ]))
 evaluation = dict(
-    interval=500,
+    interval=50,
     metric=['bbox', 'segm'],
-    dynamic_intervals=[(365001, 368750)])
+    # dynamic_intervals=[(365001, 368750)]
+    )
 checkpoint_config = dict(
-    interval=500, by_epoch=False, save_last=True, max_keep_ckpts=3)
+    interval=50, by_epoch=True, save_last=True, max_keep_ckpts=-1)
 log_config = dict(
     interval=50,
     hooks=[
-        dict(type='TextLoggerHook', by_epoch=True),
+        dict(type='TextLoggerHook', by_epoch=False),
         dict(type='TensorboardLoggerHook', ignore_last=False)
     ])
 custom_hooks = [dict(type='NumClassCheckHook')]
@@ -165,7 +166,7 @@ log_level = 'INFO'
 # load_from = 'benchmarks/mask2former_swin-s-p4-w7-224_lsj_8x2_50e_coco_20220504_001756-743b7d99.pth'
 load_from = None
 resume_from = None
-workflow = [('train', 5000)]
+workflow = [('train', 2000)]
 opencv_num_threads = 0
 mp_start_method = 'fork'
 auto_scale_lr = dict(enable=False, base_batch_size=16)
@@ -409,18 +410,78 @@ optimizer = dict(
         norm_decay_mult=0.0))
 optimizer_config = dict(grad_clip=dict(max_norm=0.01, norm_type=2))
 lr_config = dict(
-    policy='step',
-    gamma=0.1,
-    by_epoch=False,
-    step=[327778, 355092],
-    warmup='linear',
-    warmup_by_epoch=False,
-    warmup_ratio=1.0,
-    warmup_iters=10)
-max_iters = 368750
-runner = dict(type='IterBasedRunner', max_iters=368750)
-interval = 500
-dynamic_intervals = [(365001, 368750)]
+    # 支持的学习率策略 https://github.com/open-mmlab/mmcv/blob/master/mmcv/runner/hooks/lr_updater.py
+    # 使用方法 https://mmdetection.readthedocs.io/en/stable/tutorials/customize_runtime.html#customize-training-schedules
+
+    # 通用设置
+    # by_epoch (bool): LR changes epoch by epoch
+    # warmup (string): Type of warmup used. It can be None(use no warmup),
+    #     'constant', 'linear' or 'exp'
+    # warmup_iters (int): The number of iterations or epochs that warmup
+    #     lasts
+    # warmup_ratio (float): LR used at the beginning of warmup equals to
+    #     warmup_ratio * initial_lr
+    # warmup_by_epoch (bool): When warmup_by_epoch == True, warmup_iters
+    #     means the number of epochs that warmup lasts, otherwise means the
+    #     number of iteration that warmup lasts
+    by_epoch = True,
+    warmup = 'exp',
+    warmup_iters = 10,
+    warmup_ratio = 1.0,
+    warmup_by_epoch = True,
+
+    # class CosineAnnealingLrUpdaterHook
+    # min_lr (float, optional): The minimum lr. Default: None.
+    # min_lr_ratio (float, optional): The ratio of minimum lr to the base lr.
+    #     Either `min_lr` or `min_lr_ratio` should be specified.
+    #     Default: None.
+    policy = 'CosineAnnealing',
+    min_lr = 0.0001,
+
+    # class FlatCosineAnnealingLrUpdaterHook
+    # start_percent (float): When to start annealing the learning rate
+    #     after the percentage of the total training steps.
+    #     The value should be in range [0, 1).
+    #     Default: 0.75
+    # min_lr (float, optional): The minimum lr. Default: None.
+    # min_lr_ratio (float, optional): The ratio of minimum lr to the base lr.
+    #     Either `min_lr` or `min_lr_ratio` should be specified.
+    #     Default: None.
+    # policy = 'FlatCosineAnnealing',
+    # min_lr = 0.0001,
+
+    # class LinearAnnealingLrUpdaterHook
+    # min_lr (float, optional): The minimum lr. Default: None.
+    # min_lr_ratio (float, optional): The ratio of minimum lr to the base lr.
+    #     Either `min_lr` or `min_lr_ratio` should be specified.
+    #     Default: None.
+    # policy = 'LinearAnnealing',
+    # min_lr = 0.0001,
+
+
+    # class StepLrUpdaterHook
+    # step (int | list[int]): Step to decay the LR. If an int value is given,
+    #     regard it as the decay interval. If a list is given, decay LR at
+    #     these steps.
+    # gamma (float): Decay LR ratio. Defaults to 0.1.
+    # min_lr (float, optional): Minimum LR value to keep. If LR after decay
+    #     is lower than `min_lr`, it will be clipped to this value. If None
+    #     is given, we don't perform lr clipping. Default: None.
+    # policy='step',
+    # gamma=0.1,
+    # by_epoch=False,
+    # step=[327778, 355092],
+    # warmup='linear',
+    # warmup_by_epoch=False,
+    # warmup_ratio=1.0,
+    # warmup_iters=10
+)
+# max_iters = 368750
+max_iters = 2000
+# runner = dict(type='IterBasedRunner', max_iters=368750)
+runner = dict(type='EpochBasedRunner', max_epochs=2000)
+interval = 50
+# dynamic_intervals = [(365001, 368750)]
 pad_cfg = dict(img=(128, 128, 128), masks=0, seg=255)
 pretrained = 'https://github.com/SwinTransformer/storage/releases/download/v1.0.0/swin_small_patch4_window7_224.pth'
 depths = [2, 2, 18, 2]
@@ -498,6 +559,6 @@ custom_keys = dict({
     'backbone.stages.2.blocks.17.norm':
     dict(lr_mult=0.1, decay_mult=0.0)
 })
-work_dir = './work_dirs/mask2former_swin-s-p4-w7-224_lsj_8x2_50e_coco'
+work_dir = './work_dirs/mask2former_swin-s-p4-w7-224_lsj_8x2_50e_coco'+'_'+lr_config['policy']
 auto_resume = False
 gpu_ids = [0]

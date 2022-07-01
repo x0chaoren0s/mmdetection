@@ -59,7 +59,7 @@ class CocoDataset(CustomDataset):
     #            (95, 54, 80), (128, 76, 255), (201, 57, 1), (246, 0, 122),
     #            (191, 162, 208)]
 
-    CLASSES = ('fish')
+    CLASSES = ('fish',)
 
     PALETTE = [(220, 20, 60)]
 

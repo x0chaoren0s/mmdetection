@@ -82,7 +82,7 @@ def coco_classes():
     #     'scissors', 'teddy_bear', 'hair_drier', 'toothbrush'
     # ]
     return [
-        'fish'
+        'fish',
     ]
 
 
