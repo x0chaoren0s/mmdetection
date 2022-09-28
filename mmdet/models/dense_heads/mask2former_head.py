@@ -428,3 +428,5 @@ class Mask2FormerHead(MaskFormerHead):
             mask_pred_list.append(mask_pred)
 
         return cls_pred_list, mask_pred_list
+        # cls_pred_list: [10个：torch.Size([1, 100, 2])]
+        # mask_pred_list: [10个：torch.Size([1, 100, 192, 336])]
