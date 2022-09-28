@@ -70,20 +70,33 @@ def mask2bbox(masks):
 
     Args:
         masks (Tensor): Binary mask of shape (n, h, w).
+        # shape: torch.Size([100, 1080, 1920])
 
     Returns:
         Tensor: Bboxe with shape (n, 4) of \
             positive region in binary mask.
+            [x1,y1,x2,y2] 其中x2和y2会在合法的范围内大一个像素，以避免和x1,y1重合
     """
-    N = masks.shape[0]
-    bboxes = masks.new_zeros((N, 4), dtype=torch.float32)
-    x_any = torch.any(masks, dim=1)
-    y_any = torch.any(masks, dim=2)
+    N = masks.shape[0]                                      # 100
+    bboxes = masks.new_zeros((N, 4), dtype=torch.float32)   # shape: torch.Size([100, 4])
+    x_any = torch.any(masks, dim=1)                         # shape: torch.Size([100, 1920])  torch.sum(x_any): tensor(18055, device='cuda:0')
+    y_any = torch.any(masks, dim=2)                         # shape: torch.Size([100, 1080])  torch.sum(y_any): tensor(21515, device='cuda:0')
     for i in range(N):
         x = torch.where(x_any[i, :])[0]
         y = torch.where(y_any[i, :])[0]
         if len(x) > 0 and len(y) > 0:
             bboxes[i, :] = bboxes.new_tensor(
-                [x[0], y[0], x[-1] + 1, y[-1] + 1])
+                [x[0], y[0], x[-1] + 1, y[-1] + 1])       
 
-    return bboxes
+    return bboxes                                           # shape: torch.Size([100, 4])
+
+if __name__ == '__main__':
+    mask0 = torch.zeros((3,4))
+    mask0[1,1:3] = 1
+    mask1 = torch.zeros((3,4))
+    mask1[2,0] = 1
+    mask1[1,2] = 1
+    masks = torch.stack((mask0,mask1),0)
+    print(masks)
+    boxes = mask2bbox(masks)
+    print(boxes)
