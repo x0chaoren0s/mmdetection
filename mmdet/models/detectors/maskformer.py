@@ -7,6 +7,7 @@ from mmdet.core.visualization import imshow_det_bboxes
 from ..builder import DETECTORS, build_backbone, build_head, build_neck
 from .single_stage import SingleStageDetector
 
+import cv2
 
 @DETECTORS.register_module()
 class MaskFormer(SingleStageDetector):
@@ -150,7 +151,7 @@ class MaskFormer(SingleStageDetector):
         feats = self.extract_feat(imgs)
         mask_cls_results, mask_pred_results = self.panoptic_head.simple_test(
             feats, img_metas, **kwargs)
-        results = self.panoptic_fusion_head.simple_test(
+        results = self.panoptic_fusion_head.simple_test(    # results: [ {'ins_results':(shape: torch.Size([100]), torch.Size([100, 5]), torch.Size([100, 1080, 1920]))},{},.. ]
             mask_cls_results, mask_pred_results, img_metas, **kwargs)
         for i in range(len(results)):
             if 'pan_results' in results[i]:
@@ -158,23 +159,23 @@ class MaskFormer(SingleStageDetector):
                 ).cpu().numpy()
 
             if 'ins_results' in results[i]:
-                labels_per_image, bboxes, mask_pred_binary = results[i][
+                labels_per_image, bboxes, mask_pred_binary = results[i][  # shape: torch.Size([100]), torch.Size([100, 5]), torch.Size([100, 1080, 1920])
                     'ins_results']
-                bbox_results = bbox2result(bboxes, labels_per_image,
+                bbox_results = bbox2result(bboxes, labels_per_image,    # [ np.ndarry([100, 5]) ]
                                            self.num_things_classes)
-                mask_results = [[] for _ in range(self.num_things_classes)]
+                mask_results = [[] for _ in range(self.num_things_classes)] # self.num_things_classes==1    mask_results: [[]]
                 for j, label in enumerate(labels_per_image):
                     mask = mask_pred_binary[j].detach().cpu().numpy()
-                    mask_results[label].append(mask)
-                results[i]['ins_results'] = bbox_results, mask_results
+                    mask_results[label].append(mask)                        #  mask_results: [[100个：np.ndarray 其shape: (1080, 1920)]]
+                results[i]['ins_results'] = bbox_results, mask_results  # results: [ {'ins_results':( [np.ndarry([100, 5])], [[100个：np.ndarray 其shape: (1080, 1920)]] )},{},.. ]
 
             assert 'sem_results' not in results[i], 'segmantic segmentation '\
                 'results are not supported yet.'
 
         if self.num_stuff_classes == 0:
-            results = [res['ins_results'] for res in results]
+            results = [res['ins_results'] for res in results]   # results: [ ( [np.ndarry([100, 5])], [[100个：np.ndarray 其shape: (1080, 1920)]] ),(),.. ]
 
-        return results
+        return results  # [ (), (), .. ]
 
     def aug_test(self, imgs, img_metas, **kwargs):
         raise NotImplementedError
