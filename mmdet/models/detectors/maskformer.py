@@ -7,7 +7,6 @@ from mmdet.core.visualization import imshow_det_bboxes
 from ..builder import DETECTORS, build_backbone, build_head, build_neck
 from .single_stage import SingleStageDetector
 
-import cv2
 
 @DETECTORS.register_module()
 class MaskFormer(SingleStageDetector):
