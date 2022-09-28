@@ -117,8 +117,10 @@ class MaskFormerFusionHead(BasePanopticFusionHead):
                 (num_queries, cls_out_channels) for a image.
                 Note `cls_out_channels` should includes
                 background.
+                # shape: torch.Size([100, 2])
             mask_pred (Tensor): Mask outputs of shape
                 (num_queries, h, w) for a image.
+                # shape: torch.Size([100, 1080, 1920])
 
         Returns:
             tuple[Tensor]: Instance segmentation results.
@@ -130,36 +132,37 @@ class MaskFormerFusionHead(BasePanopticFusionHead):
             - mask_pred_binary (Tensor): Instance masks of \
                 shape (n, h, w).
         """
-        max_per_image = self.test_cfg.get('max_per_image', 100)
-        num_queries = mask_cls.shape[0]
+        max_per_image = self.test_cfg.get('max_per_image', 100) # 100
+        num_queries = mask_cls.shape[0]                         # 100
         # shape (num_queries, num_class)
-        scores = F.softmax(mask_cls, dim=-1)[:, :-1]
+        scores = F.softmax(mask_cls, dim=-1)[:, :-1]            # shape: torch.Size([100, 1])
         # shape (num_queries * num_class, )
         labels = torch.arange(self.num_classes, device=mask_cls.device).\
-            unsqueeze(0).repeat(num_queries, 1).flatten(0, 1)
+            unsqueeze(0).repeat(num_queries, 1).flatten(0, 1)   # shape: torch.Size([100])  self.num_classes: 1
         scores_per_image, top_indices = scores.flatten(0, 1).topk(
-            max_per_image, sorted=False)
-        labels_per_image = labels[top_indices]
+            max_per_image, sorted=False)                        # scores_per_image.shape: torch.Size([100])
+                                                                # top_indices.shape: torch.Size([100])
+        labels_per_image = labels[top_indices]                  # shape: torch.Size([100])
 
-        query_indices = top_indices // self.num_classes
-        mask_pred = mask_pred[query_indices]
+        query_indices = top_indices // self.num_classes         # shape: torch.Size([100])  self.num_classes: 1
+        mask_pred = mask_pred[query_indices]                    # shape: torch.Size([100, 1080, 1920])
 
         # extract things
-        is_thing = labels_per_image < self.num_things_classes
-        scores_per_image = scores_per_image[is_thing]
-        labels_per_image = labels_per_image[is_thing]
-        mask_pred = mask_pred[is_thing]
+        is_thing = labels_per_image < self.num_things_classes   # shape: torch.Size([100])  self.num_things_classes: 1
+        scores_per_image = scores_per_image[is_thing]           # shape: torch.Size([100])
+        labels_per_image = labels_per_image[is_thing]           # shape: torch.Size([100])
+        mask_pred = mask_pred[is_thing]                         # shape: torch.Size([100, 1080, 1920])
 
-        mask_pred_binary = (mask_pred > 0).float()
+        mask_pred_binary = (mask_pred > 0).float()              # shape: torch.Size([100, 1080, 1920])
         mask_scores_per_image = (mask_pred.sigmoid() *
                                  mask_pred_binary).flatten(1).sum(1) / (
-                                     mask_pred_binary.flatten(1).sum(1) + 1e-6)
-        det_scores = scores_per_image * mask_scores_per_image
-        mask_pred_binary = mask_pred_binary.bool()
-        bboxes = mask2bbox(mask_pred_binary)
-        bboxes = torch.cat([bboxes, det_scores[:, None]], dim=-1)
+                                     mask_pred_binary.flatten(1).sum(1) + 1e-6) # shape: torch.Size([100])
+        det_scores = scores_per_image * mask_scores_per_image   # shape: torch.Size([100])
+        mask_pred_binary = mask_pred_binary.bool()              # shape: torch.Size([100, 1080, 1920])
+        bboxes = mask2bbox(mask_pred_binary)                    # shape: torch.Size([100, 4])
+        bboxes = torch.cat([bboxes, det_scores[:, None]], dim=-1)   # shape: torch.Size([100, 5])
 
-        return labels_per_image, bboxes, mask_pred_binary
+        return labels_per_image, bboxes, mask_pred_binary       # shape: torch.Size([100]), torch.Size([100, 5]), torch.Size([100, 1080, 1920])
 
     def simple_test(self,
                     mask_cls_results,
@@ -238,4 +241,4 @@ class MaskFormerFusionHead(BasePanopticFusionHead):
 
             results.append(result)
 
-        return results
+        return results  # [ {'ins_results':(shape: torch.Size([100]), torch.Size([100, 5]), torch.Size([100, 1080, 1920]))},{},.. ]
