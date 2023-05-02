@@ -82,10 +82,16 @@ def main():
         cfg.work_dir = args.work_dir
     elif cfg.get('work_dir', None) is None:
         # use config filename as default work_dir if cfg.work_dir is None
-        cfg.work_dir = osp.join('./work_dirs',
-                                osp.splitext(osp.basename(args.config))[0])
+        # cfg.work_dir = osp.join('./work_dirs',
+        #                         osp.splitext(osp.basename(args.config))[0])
+        # 下面一行是我改的
+        cfg.work_dir = osp.join(osp.split(args.checkpoint)[0], 'test')
 
     cfg.load_from = args.checkpoint
+
+    # 下面两行是我改的
+    if args.show_dir is None:
+        args.show_dir = osp.splitext(osp.basename(args.checkpoint))[0]
 
     if args.show or args.show_dir:
         cfg = trigger_visualization_hook(cfg, args)
