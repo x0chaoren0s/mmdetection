@@ -14,5 +14,5 @@ model = dict(
         bbox_head=dict(
             num_classes=6,)))
 
-# 使用预训练的 Mask R-CNN 模型权重来做初始化，可以提高模型性能
+# 使用预训练的模型权重来做初始化，可以提高模型性能
 load_from = 'https://download.openmmlab.com/mmdetection/v2.0/faster_rcnn/faster_rcnn_r101_fpn_mstrain_3x_coco/faster_rcnn_r101_fpn_mstrain_3x_coco_20210524_110822-4d4d2ca8.pth'
