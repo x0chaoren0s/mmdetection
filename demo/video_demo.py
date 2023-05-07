@@ -9,6 +9,8 @@ from mmengine.utils import track_iter_progress
 from mmdet.apis import inference_detector, init_detector
 from mmdet.registry import VISUALIZERS
 
+from pathlib import Path
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description='MMDetection video demo')
@@ -35,13 +37,40 @@ def main():
     assert args.out or args.show, \
         ('Please specify at least one operation (save/show the '
          'video) with the argument "--out" or "--show"')
+    
+    if args.out:
+        Path(args.out).parent.mkdir(parents=True, exist_ok=True)
 
     # build the model from a config file and a checkpoint file
     model = init_detector(args.config, args.checkpoint, device=args.device)
 
     # build test pipeline
-    model.cfg.test_dataloader.dataset.pipeline[0].type = 'LoadImageFromNDArray'
+    model.cfg.test_dataloader.dataset.pipeline = [
+        dict(type='LoadImageFromNDArray', backend_args=None),
+        dict(type='Resize', scale=(1333, 800), keep_ratio=True),
+        # If you don't have a gt annotation, delete the pipeline
+        dict(type='LoadAnnotations', with_bbox=True),
+        dict(
+            type='PackDetInputs',
+            meta_keys=('img_id', 'img_path', 'ori_shape', 'img_shape',
+                    'scale_factor'))
+    ]
+    # model.cfg.test_dataloader.dataset.pipeline[0].type = 'LoadImageFromNDArray'
     test_pipeline = Compose(model.cfg.test_dataloader.dataset.pipeline)
+    model.cfg.test_dataloader = dict(
+        batch_size=1,
+        num_workers=2,
+        persistent_workers=True,
+        drop_last=False,
+        sampler=dict(type='DefaultSampler', shuffle=False),
+        dataset=dict(
+            type='CocoDataset',
+            data_root='data/coco/',
+            ann_file='annotations/instances_val2017.json',
+            data_prefix=dict(img='val2017/'),
+            test_mode=True,
+            pipeline=model.cfg.test_dataloader.dataset.pipeline,
+            backend_args=None))
 
     # init visualizer
     visualizer = VISUALIZERS.build(model.cfg.visualizer)
